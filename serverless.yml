@@ -19,6 +19,7 @@ provider:
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
     GROUPS_TABLE: groups-${self:provider.stage}
     IMAGES_TABLE: images-${self:provider.stage}
+    IMAGE_ID_INDEX: ImageIdIndex
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -29,7 +30,13 @@ provider:
     - Effect: Allow
       Action:
         - dynamodb:Query
+        - dynamodb:PutItem
       Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.IMAGES_TABLE}
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.IMAGES_TABLE}/index/${self:provider.environment.IMAGE_ID_INDEX}
+
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'ap-southeast-1'}
 
@@ -47,6 +54,9 @@ custom:
       - name: GroupRequest
         contentType: application/json
         schema: ${file(models/create-group-request.json)}
+      - name: ImageRequest
+        contentType: application/json
+        schema: ${file(models/create-image-request.json)}
 
 functions:
   GetGroups:
@@ -76,6 +86,26 @@ functions:
           method: get
           path: groups/{groupId}/images
           cors: true
+  GetImage:
+    handler: src/lambda/http/getImage.handler
+    events:
+      - http:
+          method: get
+          path: images/{imageId}
+          cors: true
+  CreateImage:
+    handler: src/lambda/http/createImage.handler
+    events:
+      - http:
+          method: post
+          path: groups/{groupId}/images
+          cors: true
+          reqValidatorName: RequestBodyValidator
+          documentation: 
+            summary: Create a new image
+            description: Create a new image
+            requestModels:
+              'application/json': ImageRequest
 
 resources:
   Resources:
@@ -106,6 +136,8 @@ resources:
             AttributeType: S
           - AttributeName: timestamp
             AttributeType: S
+          - AttributeName: imageId
+            AttributeType: S
         KeySchema:
           - AttributeName: groupId
             KeyType: HASH
@@ -113,3 +145,10 @@ resources:
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.IMAGES_TABLE}
+        GlobalSecondaryIndexes:
+          - IndexName: ${self:provider.environment.IMAGE_ID_INDEX}
+            KeySchema:
+            - AttributeName: imageId
+              KeyType: HASH
+            Projection:
+              ProjectionType: ALL
