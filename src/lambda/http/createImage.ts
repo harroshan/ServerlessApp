@@ -34,7 +34,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     headers: {
       'Access-Control-Allow-Origin': '*'
     },
-    body: newItem
+    body: JSON.stringify({
+      newItem
+    })
   }
 }
 
