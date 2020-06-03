@@ -16,6 +16,7 @@ provider:
     GROUPS_TABLE: groups-${self:provider.stage}
     IMAGES_TABLE: images-${self:provider.stage}
     IMAGE_ID_INDEX: ImageIdIndex
+    CONNECTIONS_TABLE: Connections-${self:provider.stage}
     IMAGES_S3_BUCKET: harroshan-serverless-images-udagram-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
   iamRoleStatements:
@@ -39,7 +40,12 @@ provider:
         - s3:PutObject
         - s3:GetObject
       Resource: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*  
-
+    - Effect: Allow
+      Action:
+        - dynamodb:Scan
+        - dynamodb:PutItem
+        - dynamodb:DeleteItem
+      Resource: arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.CONNECTIONS_TABLE}
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'ap-southeast-1'}
 
@@ -47,6 +53,7 @@ custom:
   webpack:
     webpackConfig: ./webpack.config.js
     includeModules: true
+  # topicName: imagesTopic-${self:provider.stage}
   documentation:
     api:
       info:
@@ -110,7 +117,22 @@ functions:
             requestModels:
               'application/json': ImageRequest
   SendUploadNotifications:
+    environment:
+      STAGE: ${self:provider.stage}
+      API_ID:
+        Ref: WebsocketsApi
     handler: src/lambda/s3/sendNotifications.handler
+  ConnectHandler:
+    handler: src/lambda/websocket/connect.handler
+    events:
+      - websocket:
+          route: $connect
+
+  DisconnectHandler:
+    handler: src/lambda/websocket/disconnect.handler
+    events:
+      - websocket:
+          route: $disconnect
 
 resources:
   Resources:
@@ -157,14 +179,27 @@ resources:
               KeyType: HASH
             Projection:
               ProjectionType: ALL
+    WebSocketConnectionsDynamoDBTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.CONNECTIONS_TABLE}
     AttachmentsBucket:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: ${self:provider.environment.IMAGES_S3_BUCKET}
         NotificationConfiguration:
-          TopicConfigurations:
+          LambdaConfigurations:
             - Event: s3:ObjectCreated:*
-              Topic: !GetAtt SendUploadNotificationsLambdaFunction.Arn
+              Function: !GetAtt SendUploadNotificationsLambdaFunction.Arn
         CorsConfiguration:
           CorsRules:
             -
@@ -186,7 +221,7 @@ resources:
         Principal: s3.amazonaws.com
         Action: lambda:InvokeFunction
         SourceAccount: !Ref AWS::AccountId
-        SourceArn: arn:aws:s3:::${self:provide.environment.IMAGES_S3_BUCKET}
+        SourceArn: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}
     BucketPolicy:
       Type: AWS::S3::BucketPolicy
       Properties:
@@ -200,3 +235,8 @@ resources:
               Action: 's3:GetObject'
               Resource: 'arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*'
         Bucket: !Ref AttachmentsBucket
+    # ImagesTopic:
+    #   Type: AWS::SNS::Topic
+    #   Properties:
+    #     DisplayName: Image bucket topic
+    #     TopicName: ${self:custom.topicName}
