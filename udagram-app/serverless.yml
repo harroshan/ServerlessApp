@@ -5,6 +5,8 @@ plugins:
   - serverless-webpack
   - serverless-aws-documentation
   - serverless-reqvalidator-plugin
+  - serverless-offline
+  - serverless-dynamodb-local
 
 provider:
   name: aws
@@ -68,6 +70,14 @@ provider:
   region: ${opt:region, 'ap-southeast-1'}
 
 custom:
+  serverless-offline:
+    port: 3003
+  dynamodb:
+    start: 
+      port: 8000
+      inMemory: true
+      migrate: true
+
   webpack:
     webpackConfig: ./webpack.config.js
     includeModules: true
