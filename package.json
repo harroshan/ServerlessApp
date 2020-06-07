@@ -7,9 +7,12 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "aws-xray-sdk": "^3.0.1",
     "elasticsearch": "^16.7.1",
     "http-aws-es": "^6.0.0",
     "jimp": "^0.13.0",
+    "jsonwebtoken": "^8.5.1",
+    "middy": "^0.36.0",
     "serverless": "^1.72.0",
     "source-map-support": "^0.5.10"
   },
