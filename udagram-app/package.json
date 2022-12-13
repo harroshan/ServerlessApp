@@ -10,7 +10,7 @@
     "aws-serverless-express": "^3.3.8",
     "aws-xray-sdk": "^3.0.1",
     "elasticsearch": "^16.7.1",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "http-aws-es": "^6.0.0",
     "jimp": "^0.13.0",
     "jsonwebtoken": "^8.5.1",
