@@ -17,7 +17,7 @@
     "middy": "^0.36.0",
     "serverless": "^1.72.0",
     "serverless-dynamodb-local": "^0.2.39",
-    "serverless-offline": "^6.4.0",
+    "serverless-offline": "^12.0.4",
     "serverless-plugin-canary-deployments": "^0.4.8",
     "source-map-support": "^0.5.10"
   },
